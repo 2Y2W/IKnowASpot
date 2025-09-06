@@ -49,4 +49,9 @@ Join our community of developers creating universal apps.
 - [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
 - [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
 
-BALLS
+## How to fork and pull 
+
+after forking: 
+- git add remote master git@github.com:2Y2W/IKnowASpot.git
+- git remote --v to verify, you should have two remotes (origin for forked, master for 2Y2W) 
+- git pull master main
