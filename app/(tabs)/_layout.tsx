@@ -1,33 +1,37 @@
-import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { Feather } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
+import { blue } from "react-native-reanimated/lib/typescript/Colors";
 
 export default function TabLayout() {
   return (
     <Tabs screenOptions={{ tabBarActiveTintColor: "blue" }}>
       <Tabs.Screen
-        name="explore"
+        name="index"
         options={{
+          headerShown: false,
           title: "Explore",
           tabBarIcon: ({ color }) => (
-            <FontAwesome size={28} name="home" color={color} />
+            <Feather name="map" size={28} color={color}/>
           ),
         }}
       />
       <Tabs.Screen
         name="MakePost"
         options={{
+          headerShown: false,
           title: "Post",
           tabBarIcon: ({ color }) => (
-            <FontAwesome size={28} name="cog" color={color} />
+            <Feather size={28} name="arrow-up" color={color} />
           ),
         }}
       />
       <Tabs.Screen
         name="Account"
         options={{
+          headerShown: false,
           title: "Account",
           tabBarIcon: ({ color }) => (
-            <FontAwesome size={28} name="cog" color={color} />
+            <Feather size={28} name="user" color={color} />
           ),
         }}
       />

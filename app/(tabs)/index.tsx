@@ -7,7 +7,7 @@ export default function Account()
   return(
     <View>
       <Text>
-        INdex
+        EXPLOREEEE
       </Text>
     </View>
   );
