@@ -1,0 +1,14 @@
+import {
+  View, Text, TextInput, TouchableOpacity, ScrollView, SafeAreaView,
+} from "react-native";
+
+export default function Explore()
+{
+  return(
+    <View>
+      <Text>
+        Explore
+      </Text>
+    </View>
+  );
+}
