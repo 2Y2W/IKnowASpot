@@ -2,12 +2,15 @@ import React from "react";
 import { StyleSheet } from "react-native";
 import RNMapView, { Marker, Region } from "react-native-maps";
 import { MapViewProps } from "./MapView.types";
+import { View } from "react-native";
+import "../../global.css";
 
 export default function MapView({
   latitude,
   longitude,
   zoom = 14,
   style,
+  markers
 }: MapViewProps) {
   const region: Region = {
     latitude,
@@ -17,9 +20,19 @@ export default function MapView({
   };
 
   return (
-    <RNMapView style={[styles.map, style]} initialRegion={region}>
-      <Marker coordinate={{ latitude, longitude }} />
-    </RNMapView>
+    <View className="flex-1">
+      <RNMapView style={[styles.map, style]} initialRegion={region}
+      showsUserLocation={true}
+      followsUserLocation={true}>
+        {markers?.map((m) => (
+          <Marker
+            key={m.id}
+            coordinate={{ latitude: m.latitude, longitude: m.longitude }}
+            title={m.title}
+          />
+        ))}
+      </RNMapView>
+    </View>
   );
 }
 

@@ -9,7 +9,10 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "I Know a Spot uses your location to help you discover nearby spots and show your position on the map"
+      }
     },
     "android": {
       "adaptiveIcon": {
