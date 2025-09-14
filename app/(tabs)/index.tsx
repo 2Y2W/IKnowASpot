@@ -38,7 +38,10 @@ export default function MapScreen() {
       zoom={14}
       showsUserLocation
       markers={[
-        { id: "1", latitude: 40.7128, longitude: -74.006, title: "New York" },
+        { id: "1", 
+          latitude: 40.7128, 
+          longitude: -74.006, 
+          title: "New York" },
         {
           id: "2",
           latitude: 40.0522,

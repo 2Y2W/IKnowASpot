@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from "react";
 import { MapViewProps } from "./MapView.types";
-import { Map, View } from "ol";
+import { Map, View, Overlay } from "ol";
 import TileLayer from "ol/layer/Tile";
 import OSM from "ol/source/OSM";
 import { fromLonLat } from "ol/proj";
@@ -8,7 +8,88 @@ import VectorSource from "ol/source/Vector";
 import VectorLayer from "ol/layer/Vector";
 import Feature from "ol/Feature";
 import Point from "ol/geom/Point";
-import { Style, Circle, Fill, Stroke } from "ol/style";
+import { Style, Circle, Fill, Stroke, Icon } from "ol/style";
+import { unByKey } from "ol/Observable";
+import "../../global.css"
+
+// ✅ 1. Define all the necessary CSS as a string.
+// Restyled popup for better centering and appearance
+const popupCss = `
+  .ol-popup {
+    position: absolute;
+    background-color: white;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    padding: 15px;
+    border-radius: 10px;
+    border: 1px solid #cccccc;
+    bottom: 35px; /* Adjusted to be above the marker */
+    transform: translateX(-50%); /* Keeps the popup horizontally centered relative to its anchor */
+    left: 50%; /* Anchor the popup's left edge to the center of the marker */
+    min-width: 180px;
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+    display: flex; /* Use flexbox for content alignment */
+    flex-direction: column;
+    align-items: center; /* Center content horizontally */
+    justify-content: center; /* Center content vertically */
+    text-align: center; /* Ensure text itself is centered */
+  }
+  .ol-popup:after, .ol-popup:before {
+    top: 100%;
+    border: solid transparent;
+    content: " ";
+    height: 0;
+    width: 0;
+    position: absolute;
+    pointer-events: none;
+  }
+  .ol-popup:after {
+    border-top-color: white;
+    border-width: 10px;
+    left: 50%;
+    margin-left: -10px;
+  }
+  .ol-popup:before {
+    border-top-color: #cccccc;
+    border-width: 11px;
+    left: 50%;
+    margin-left: -11px;
+  }
+  .ol-popup-closer {
+    text-decoration: none;
+    position: absolute;
+    top: 2px;
+    right: 8px;
+    color: #333;
+    font-size: 16px; /* Slightly larger closer icon */
+    font-weight: bold;
+  }
+  .ol-popup-closer:after {
+    content: "✖";
+  }
+  .ol-popup-content {
+    /* Additional styling for the content if needed */
+    margin-top: 5px; /* Space for the closer button */
+    padding: 0 10px; /* Add some horizontal padding */
+    color: #333;
+    max-width: 250px; /* Prevent content from stretching too wide */
+    word-wrap: break-word; /* Ensure long words wrap */
+  }
+`;
+
+// ✅ 2. Create a helper component to inject the CSS string into a <style> tag.
+const StyleInjector = ({ css }: { css: string }) => {
+  useEffect(() => {
+    const style = document.createElement("style");
+    style.textContent = css;
+    document.head.append(style);
+    // Cleanup: remove the style tag when the component unmounts
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, [css]);
+  return null; // This component doesn't render anything itself
+};
 
 export default function MapView({
   latitude,
@@ -19,73 +100,120 @@ export default function MapView({
   showUserLocation = true,
 }: MapViewProps & { showUserLocation?: boolean }) {
   const mapRef = useRef<HTMLDivElement | null>(null);
+  const popupRef = useRef<HTMLDivElement | null>(null);
+  const popupContentRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    if (!mapRef.current) return;
+    if (!mapRef.current || !popupRef.current || !popupContentRef.current)
+      return;
 
-    console.log("Initializing OL Map at:", { latitude, longitude, zoom });
-
-    // Vector source for markers
     const vectorSource = new VectorSource();
+    const vectorLayer = new VectorLayer({ source: vectorSource });
 
-    // Base map
+    const overlay = new Overlay({
+      element: popupRef.current,
+      autoPan: { animation: { duration: 250 } },
+      positioning: "bottom-center", // This is crucial for OpenLayers to help position the popup relative to the coordinates
+    });
+
     const map = new Map({
       target: mapRef.current,
-      layers: [
-        new TileLayer({ source: new OSM() }),
-        new VectorLayer({ source: vectorSource }), // ✅ attach marker layer right away
-      ],
+      layers: [new TileLayer({ source: new OSM() }), vectorLayer],
+      overlays: [overlay],
       view: new View({
-        center: fromLonLat([longitude, latitude]), // 👈 careful: [lon, lat]
+        center: fromLonLat([longitude, latitude]),
         zoom,
       }),
     });
 
-    // Add custom markers
-    markers.forEach((m) => {
-      console.log("Adding marker:", m);
-      const feature = new Feature({
-        geometry: new Point(fromLonLat([m.longitude, m.latitude])),
+    const closer = popupRef.current.querySelector(".ol-popup-closer");
+    if (closer) {
+      closer.addEventListener("click", () => {
+        overlay.setPosition(undefined);
+        (closer as HTMLElement).blur();
+        return false;
       });
+    }
 
+    markers.forEach((markerData) => {
+      const feature = new Feature({
+        geometry: new Point(
+          fromLonLat([markerData.longitude, markerData.latitude])
+        ),
+        ...markerData,
+        type: "marker",
+      });
       feature.setStyle(
         new Style({
           image: new Circle({
-            radius: 6,
+            radius: 7,
             fill: new Fill({ color: "red" }),
             stroke: new Stroke({ color: "white", width: 2 }),
           }),
         })
       );
-
       vectorSource.addFeature(feature);
     });
 
-    // Add user location as blue dot
     if (showUserLocation) {
-      console.log("Adding user location dot:", { latitude, longitude });
       const userFeature = new Feature({
         geometry: new Point(fromLonLat([longitude, latitude])),
+        type: "user_location",
       });
-
       userFeature.setStyle(
         new Style({
-          image: new Circle({
-            radius: 8,
-            fill: new Fill({ color: "#4285F4" }), // blue
-            stroke: new Stroke({ color: "white", width: 2 }),
+          image: new Icon({
+            anchor: [0.5, 1],
+            src: "https://maps.google.com/mapfiles/ms/icons/blue-dot.png",
+            scale: 1,
           }),
         })
       );
-
       vectorSource.addFeature(userFeature);
     }
 
+    const clickListener = map.on("click", (evt) => {
+      const feature = map.forEachFeatureAtPixel(evt.pixel, (ft) => ft);
+      if (feature && feature.get("type") === "marker") {
+        const coordinates = (feature.getGeometry() as Point).getCoordinates();
+        const title = feature.get("title") || "No Title";
+        popupContentRef.current!.innerHTML = title;
+        overlay.setPosition(coordinates);
+      } else {
+        overlay.setPosition(undefined);
+      }
+    });
+
+    const pointerMoveListener = map.on("pointermove", (e) => {
+      const pixel = map.getEventPixel(e.originalEvent);
+      const hit = map.hasFeatureAtPixel(pixel, {
+        filter: (feature) => feature.get("type") === "marker",
+      });
+      if (map.getTargetElement()) {
+        (map.getTargetElement() as HTMLElement).style.cursor = hit
+          ? "pointer"
+          : "";
+      }
+    });
+
     return () => {
-      console.log("Cleaning up OL map");
+      unByKey(clickListener);
+      unByKey(pointerMoveListener);
       map.setTarget(undefined);
     };
   }, [latitude, longitude, zoom, markers, showUserLocation]);
 
-  return <div ref={mapRef} className={`w-full h-full ${className ?? ""}`} />;
+  return (
+    <div className={`relative w-full h-full ${className ?? ""}`}>
+      {/* ✅ 3. Render the style injector to add the CSS to the page */}
+      <StyleInjector css={popupCss} />
+
+      <div ref={mapRef} className="w-full h-full" />
+
+      <div ref={popupRef} className="ol-popup">
+        <a href="#" className="ol-popup-closer"></a>
+        <div ref={popupContentRef} className="ol-popup-content"></div>
+      </div>
+    </div>
+  );
 }

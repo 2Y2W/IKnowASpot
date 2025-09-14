@@ -23,7 +23,7 @@ export default function MapView({
     <View className="flex-1">
       <RNMapView style={[styles.map, style]} initialRegion={region}
       showsUserLocation={true}
-      followsUserLocation={true}>
+      followsUserLocation={false}>
         {markers?.map((m) => (
           <Marker
             key={m.id}
