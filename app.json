@@ -4,17 +4,20 @@
     "slug": "IKnowASpot",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/IKnowASpotLogo.png",
     "scheme": "iknowaspot",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "I Know a Spot uses your location to help you discover nearby spots and show your position on the map"
+      }
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/images/IKnowASpotLogo.png",
+        "backgroundColor": "#fefaee"
       },
       "edgeToEdgeEnabled": true
     },
@@ -28,10 +31,10 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/IKnowASpotLogo.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
+          "backgroundColor": "#fefaee"
         }
       ]
     ],
