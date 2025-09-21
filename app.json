@@ -4,7 +4,7 @@
     "slug": "IKnowASpot",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/IKnowASpotLogo.png",
     "scheme": "iknowaspot",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -16,8 +16,8 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/images/IKnowASpotLogo.png",
+        "backgroundColor": "#fefaee"
       },
       "edgeToEdgeEnabled": true
     },
@@ -31,10 +31,10 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/IKnowASpotLogo.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
+          "backgroundColor": "#fefaee"
         }
       ]
     ],
