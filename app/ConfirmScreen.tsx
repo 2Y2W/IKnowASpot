@@ -1,24 +1,53 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   View,
   Image,
   Button,
-  StyleSheet,
   ActivityIndicator,
   Alert,
+  TextInput,
+  Text,
+  ScrollView,
+  TouchableOpacity,
 } from "react-native";
-import { API_URL } from "@/lib/api"; // adjust path if needed
 import * as SecureStore from "expo-secure-store";
+import * as Location from "expo-location";
+import { API_URL } from "@/lib/api";
 
 export default function ConfirmScreen() {
   const { uri } = useLocalSearchParams<{ uri: string }>();
   const router = useRouter();
+
   const [loading, setLoading] = useState(false);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [coords, setCoords] = useState<{ lat: number; lon: number } | null>(
+    null
+  );
+  const PRIMARY = "#2490ef";
+
+  // ✅ Grab user location on mount
+  useEffect(() => {
+    (async () => {
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert("Permission denied", "Location is required to post");
+        return;
+      }
+      let loc = await Location.getCurrentPositionAsync({});
+      setCoords({ lat: loc.coords.latitude, lon: loc.coords.longitude });
+    })();
+  }, []);
 
   async function handleUpload() {
     if (!uri) {
       Alert.alert("❌ Failed", "No photo to upload");
+      return;
+    }
+
+    if (!title) {
+      Alert.alert("⚠️ Missing title", "Please enter a title for your spot.");
       return;
     }
 
@@ -36,15 +65,11 @@ export default function ConfirmScreen() {
         body: JSON.stringify({ fileName, fileType }),
       });
 
-      if (!res.ok) {
+      if (!res.ok)
         throw new Error(`Failed to get presigned URL. Status ${res.status}`);
-      }
 
       const { uploadUrl, fileUrl } = await res.json();
-
-      if (!uploadUrl) {
-        throw new Error("Presigned URL missing from response");
-      }
+      if (!uploadUrl) throw new Error("Presigned URL missing from response");
 
       console.log("🚀 Uploading to S3:", uploadUrl);
 
@@ -58,34 +83,35 @@ export default function ConfirmScreen() {
         headers: { "Content-Type": fileType },
         body: blob,
       });
-
-      if (!putRes.ok) {
-        const errText = await putRes.text();
-        throw new Error(`S3 upload failed: ${putRes.status} → ${errText}`);
-      }
+      if (!putRes.ok) throw new Error(`S3 upload failed: ${putRes.status}`);
 
       console.log("✅ Uploaded to S3:", fileUrl);
 
       const token = await SecureStore.getItemAsync("access_token");
 
       // 5. Save metadata in backend
-      const saveRes = await fetch(`${API_URL}/save-photo`, {
+      const saveRes = await fetch(`${API_URL}/create-post`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ s3Url: fileUrl }),
+        body: JSON.stringify({
+          s3Url: fileUrl,
+          title,
+          description,
+          latitude: coords?.lat,
+          longitude: coords?.lon,
+        }),
       });
 
-      if (!saveRes.ok) {
-        throw new Error(`Failed to save photo. Status ${saveRes.status}`);
-      }
+      if (!saveRes.ok)
+        throw new Error(`Failed to save post. Status ${saveRes.status}`);
 
       const data = await saveRes.json();
-      console.log("📡 Backend save-photo response:", data);
+      console.log("📡 Backend create-post response:", data);
 
-      Alert.alert("✅ Success", "Photo uploaded!");
+      Alert.alert("✅ Success", "Post uploaded!");
       router.replace("/(tabs)");
     } catch (err: any) {
       console.error("❌ Upload error:", err);
@@ -96,32 +122,71 @@ export default function ConfirmScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      {uri && <Image source={{ uri }} style={styles.preview} />}
-
-      {loading ? (
-        <ActivityIndicator size="large" color="blue" />
-      ) : (
-        <>
-          <Button title="Retake" onPress={() => router.back()} />
-          <Button title="Upload" onPress={handleUpload} />
-        </>
+    <ScrollView className="flex-1 bg-background p-4">
+      {uri && (
+        <Image
+          source={{ uri }}
+          className="w-full h-96 mb-4 rounded-lg"
+          resizeMode="cover"
+        />
       )}
-    </View>
+
+      {/* Coordinates */}
+      {coords ? (
+        <Text className="text-primary mb-4">
+          📍 {coords.lat.toFixed(4)}, {coords.lon.toFixed(4)}
+        </Text>
+      ) : (
+        <Text className="text-gray-400 mb-4">📍 Fetching location...</Text>
+      )}
+
+      {/* Title input */}
+      <TextInput
+        className="w-full bg-card rounded-md p-3 mb-3 text-black"
+        placeholder="Enter a title"
+        value={title}
+        onChangeText={setTitle}
+        placeholderTextColor="#888"
+      />
+
+      {/* Description input */}
+      <TextInput
+        className="w-full bg-card rounded-md p-3 mb-3 h-24 text-black"
+        placeholder="Add a description"
+        value={description}
+        onChangeText={setDescription}
+        multiline
+        placeholderTextColor="#888"
+      />
+
+      {/* Buttons */}
+      {loading ? (
+        <ActivityIndicator size="large" color={PRIMARY} />
+      ) : (
+        <View className="flex flex-col justify-between gap-10">
+          <View className="flex-1">
+            <TouchableOpacity
+              onPress={() => router.back()}
+              className="p-3 border border-primary rounded-full"
+            >
+              <Text className="text-primary text-center font-semibold text-lg">
+                Retake
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <View className="flex-1">
+            <TouchableOpacity
+              onPress={handleUpload}
+              className="p-3 bg-primary rounded-full"
+            >
+              <Text className="text-white text-center font-semibold text-lg">
+                Upload
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+    </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "black",
-  },
-  preview: {
-    width: 300,
-    height: 400,
-    marginBottom: 20,
-    borderRadius: 8,
-  },
-});

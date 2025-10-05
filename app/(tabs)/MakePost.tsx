@@ -1,13 +1,25 @@
 import { CameraView, CameraType, useCameraPermissions } from "expo-camera";
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { Button, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
+import { Feather } from "@expo/vector-icons";
 
 export default function CameraScreen() {
   const [facing, setFacing] = useState<CameraType>("back");
   const [permission, requestPermission] = useCameraPermissions();
+  const [active, setActive] = useState(false);
   const cameraRef = useRef<CameraView>(null);
   const router = useRouter();
+
+  // 👇 Automatically mount/unmount camera when tab/screen focus changes
+  useFocusEffect(
+    useCallback(() => {
+      setActive(true);
+      return () => {
+        setActive(false);
+      };
+    }, [])
+  );
 
   if (!permission) return <View />;
 
@@ -32,7 +44,6 @@ export default function CameraScreen() {
         quality: 0.7,
         base64: false,
       });
-      // Navigate to confirm screen with the photo URI
       router.push({
         pathname: "/ConfirmScreen",
         params: { uri: photo.uri },
@@ -41,14 +52,24 @@ export default function CameraScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <CameraView ref={cameraRef} style={styles.camera} facing={facing} />
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity style={styles.button} onPress={toggleCameraFacing}>
-          <Text style={styles.text}>Flip</Text>
+    <View style={styles.container} className="bg-background">
+      {/* 👇 Only render the camera when screen is focused */}
+      {active && (
+        <CameraView ref={cameraRef} style={styles.camera} facing={facing} />
+      )}
+
+      <View className="absolute bottom-16 w-full items-center">
+        {/* Take photo button in center */}
+        <TouchableOpacity onPress={takePhoto} className="p-4">
+          <Feather name="circle" size={72} color="#ffffff" />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.button} onPress={takePhoto}>
-          <Text style={styles.text}>Snap</Text>
+
+        {/* Flip camera button in bottom-right */}
+        <TouchableOpacity
+          onPress={toggleCameraFacing}
+          className="absolute right-8 bottom-2 p-2"
+        >
+          <Feather name="refresh-ccw" size={32} color="#ffffff" />
         </TouchableOpacity>
       </View>
     </View>

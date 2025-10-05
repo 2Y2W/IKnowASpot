@@ -55,10 +55,10 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
-          name="Account"
+          name="ProfileScreen"
           options={{
             headerShown: false,
-            title: "Account",
+            title: "Profile",
             tabBarIcon: ({ color }) => (
               <Feather size={28} name="user" color={color} />
             ),
