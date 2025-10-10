@@ -13,4 +13,7 @@ export interface MarkerData {
   latitude: number;
   longitude: number;
   title?: string;
+  description?: string;
+  image?: string; // ✅ S3 URL (presigned image)
+  username?: string;
 }
