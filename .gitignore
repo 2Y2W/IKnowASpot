@@ -1,16 +1,27 @@
-# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+# Learn more: https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
 
-# dependencies
+# ─────────────────────────────
+# Dependencies
+# ─────────────────────────────
 node_modules/
+package-lock.json
 
-# Expo
+# ─────────────────────────────
+# Expo / React Native
+# ─────────────────────────────
 .expo/
+.expo-shared/
 dist/
 web-build/
 expo-env.d.ts
 
-# Native
-.kotlin/
+# ─────────────────────────────
+# Native builds (Android / iOS)
+# ─────────────────────────────
+android/
+ios/
+.gradle/
+build/
 *.orig.*
 *.jks
 *.p8
@@ -18,22 +29,39 @@ expo-env.d.ts
 *.key
 *.mobileprovision
 
-# Metro
+# ─────────────────────────────
+# Metro bundler
+# ─────────────────────────────
 .metro-health-check*
 
-# debug
+# ─────────────────────────────
+# Debug / Logs
+# ─────────────────────────────
 npm-debug.*
 yarn-debug.*
 yarn-error.*
+*.log
 
-# macOS
+# ─────────────────────────────
+# macOS / System
+# ─────────────────────────────
 .DS_Store
+Thumbs.db
 *.pem
 
-# local env files
+# ─────────────────────────────
+# Environment & Local Config
+# ─────────────────────────────
+.env
 .env*.local
 
-# typescript
+# ─────────────────────────────
+# TypeScript
+# ─────────────────────────────
 *.tsbuildinfo
 
-app-example
+# ─────────────────────────────
+# Misc / Examples / Custom
+# ─────────────────────────────
+app-example/
+app.json

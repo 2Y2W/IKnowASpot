@@ -4,6 +4,7 @@ import * as Location from "expo-location";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
 import MapView from "../../components/maps/MapView";
+import { API_URL } from "@/lib/api";
 import "../../global.css";
 
 export default function MapScreen() {
@@ -11,6 +12,8 @@ export default function MapScreen() {
     latitude: number;
     longitude: number;
   } | null>(null);
+  const [posts, setPosts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     (async () => {
@@ -21,18 +24,38 @@ export default function MapScreen() {
           latitude: loc.coords.latitude,
           longitude: loc.coords.longitude,
         });
+        try {
+          const res = await fetch(`${API_URL}/posts`);
+          const data = await res.json();
+          setPosts(data.posts || []);
+        } catch (err) {
+          console.error("Error fetching posts:", err);
+        } finally {
+          setLoading(false);
+        }
       }
     })();
   }, []);
 
-  if (!coords) {
+  if (loading || !coords) {
     return (
       <SafeAreaView className="flex-1 bg-background items-center justify-center">
         <StatusBar style="light" backgroundColor="#111827" />
         <ActivityIndicator size="large" />
+        <Text className="text-white mt-2">Loading map...</Text>
       </SafeAreaView>
     );
   }
+
+  const spots = posts.map((p) => ({
+    id: p.id.toString(),
+    latitude: p.latitude,
+    longitude: p.longitude,
+    title: p.title,
+    description: p.description,
+    image: p.s3_url, // if your MapView supports showing images
+    username: p.username,
+  }));
 
   return (
     <View className="flex-1 bg-background">
@@ -46,20 +69,7 @@ export default function MapScreen() {
           longitude={coords.longitude}
           zoom={14}
           showsUserLocation
-          markers={[
-            {
-              id: "1",
-              latitude: 40.7128,
-              longitude: -74.006,
-              title: "New York",
-            },
-            {
-              id: "2",
-              latitude: 40.0522,
-              longitude: -74.006,
-              title: "Los Angeles",
-            },
-          ]}
+          markers={spots}
         />
       </View>
     </View>
