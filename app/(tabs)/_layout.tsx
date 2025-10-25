@@ -45,6 +45,16 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
+          name="ExplorePosts"
+          options={{
+            headerShown: false,
+            title: "Explore2",
+            tabBarIcon: ({ color }) => (
+              <Feather name="book" size={28} color={color} />
+            ),
+          }}
+        />
+        <Tabs.Screen
           name="MakePost"
           options={{
             headerShown: false,
