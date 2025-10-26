@@ -6,8 +6,10 @@ import {
   FlatList,
   ActivityIndicator,
   RefreshControl,
+  TouchableOpacity,
 } from "react-native";
 import * as SecureStore from "expo-secure-store";
+import { useRouter } from "expo-router";
 import { API_URL } from "@/lib/api";
 
 type Post = {
@@ -25,17 +27,16 @@ export default function ExplorePosts() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
   const PRIMARY = "#2490ef";
 
   const parseList = (payload: unknown): Post[] => {
-    // Accept either { posts: [...] } or [...]
     const arr = Array.isArray(payload)
       ? payload
       : (payload as any)?.posts && Array.isArray((payload as any).posts)
         ? (payload as any).posts
         : [];
 
-    // Sanitize minimally so FlatList doesn’t blow up on missing fields
     return arr
       .filter((x) => x && typeof x === "object")
       .map((x: any) => ({
@@ -137,54 +138,71 @@ export default function ExplorePosts() {
           </View>
         }
         renderItem={({ item }) => (
-          <View className="mb-4 rounded-lg bg-card p-3 shadow">
-            <Text className="text-lg font-semibold mb-1">
-              {item.title?.trim() || "Untitled"}
-            </Text>
-
-            {item.s3_url ? (
-              <Image
-                source={{ uri: item.s3_url }}
-                className="w-full h-52 mb-2 rounded-lg"
-                resizeMode="cover"
-                onError={(e) => {
-                  console.warn(
-                    "Image failed to load for post",
-                    item.id,
-                    e.nativeEvent?.error,
-                  );
-                }}
-              />
-            ) : (
-              <View className="w-full h-52 mb-2 rounded-lg bg-gray-200 items-center justify-center">
-                <Text className="text-gray-500">No image</Text>
-              </View>
-            )}
-
-            <Text className="text-sm text-gray-700 mb-1">
-              {item.description?.trim() || "No description provided."}
-            </Text>
-
-            {(Number.isFinite(item.latitude) ||
-              Number.isFinite(item.longitude)) && (
-              <Text className="text-xs text-gray-500">
-                📍{" "}
-                {Number.isFinite(item.latitude)
-                  ? item.latitude!.toFixed(4)
-                  : "--"}
-                ,{" "}
-                {Number.isFinite(item.longitude)
-                  ? item.longitude!.toFixed(4)
-                  : "--"}
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={() =>
+              router.push({
+                pathname: `/spot/${item.id}`,
+                params: {
+                  id: item.id,
+                  title: item.title,
+                  description: item.description,
+                  image: item.s3_url,
+                  latitude: item.latitude,
+                  longitude: item.longitude,
+                },
+              })
+            }
+          >
+            <View className="mb-4 rounded-lg bg-card p-3 shadow">
+              <Text className="text-lg font-semibold mb-1">
+                {item.title?.trim() || "Untitled"}
               </Text>
-            )}
 
-            {item.username && (
-              <Text className="mt-1 text-xs text-gray-400">
-                by {item.username}
+              {item.s3_url ? (
+                <Image
+                  source={{ uri: item.s3_url }}
+                  className="w-full h-52 mb-2 rounded-lg"
+                  resizeMode="cover"
+                  onError={(e) => {
+                    console.warn(
+                      "Image failed to load for post",
+                      item.id,
+                      e.nativeEvent?.error
+                    );
+                  }}
+                />
+              ) : (
+                <View className="w-full h-52 mb-2 rounded-lg bg-gray-200 items-center justify-center">
+                  <Text className="text-gray-500">No image</Text>
+                </View>
+              )}
+
+              <Text className="text-sm text-gray-700 mb-1">
+                {item.description?.trim() || "No description provided."}
               </Text>
-            )}
-          </View>
+
+              {(Number.isFinite(item.latitude) ||
+                Number.isFinite(item.longitude)) && (
+                <Text className="text-xs text-gray-500">
+                  📍{" "}
+                  {Number.isFinite(item.latitude)
+                    ? item.latitude!.toFixed(4)
+                    : "--"}
+                  ,{" "}
+                  {Number.isFinite(item.longitude)
+                    ? item.longitude!.toFixed(4)
+                    : "--"}
+                </Text>
+              )}
+
+              {item.username && (
+                <Text className="mt-1 text-xs text-gray-400">
+                  by {item.username}
+                </Text>
+              )}
+            </View>
+          </TouchableOpacity>
         )}
       />
     );

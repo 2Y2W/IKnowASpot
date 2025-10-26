@@ -38,7 +38,7 @@ export default function TabLayout() {
           name="index"
           options={{
             headerShown: false,
-            title: "Explore",
+            title: "Spot Map",
             tabBarIcon: ({ color }) => (
               <Feather name="map" size={28} color={color} />
             ),
@@ -48,7 +48,7 @@ export default function TabLayout() {
           name="ExplorePosts"
           options={{
             headerShown: false,
-            title: "Explore2",
+            title: "Explore",
             tabBarIcon: ({ color }) => (
               <Feather name="book" size={28} color={color} />
             ),
