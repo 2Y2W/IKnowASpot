@@ -53,7 +53,7 @@ Thumbs.db
 # Environment & Local Config
 # ─────────────────────────────
 .env
-.env*.local
+.env*.local.
 
 # ─────────────────────────────
 # TypeScript

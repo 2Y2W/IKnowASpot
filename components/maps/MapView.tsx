@@ -1,11 +1,11 @@
 import React from "react";
-import { StyleSheet, View, Image, Text, Dimensions } from "react-native";
+import { View, Image, Text, Dimensions } from "react-native";
 import RNMapView, { Marker, Callout, Region } from "react-native-maps";
 import { MapViewProps } from "./MapView.types";
+import { useRouter } from "expo-router";
 import "../../global.css";
 
 const { width: screenWidth } = Dimensions.get("window");
-const aspectRatio = 0.5;
 
 export default function MapView({
   latitude,
@@ -21,12 +21,14 @@ export default function MapView({
     longitudeDelta: 0.0421 / zoom,
   };
 
+  const router = useRouter();
+
   return (
     <View className="flex-1">
       <RNMapView
         style={[{ flex: 1 }, style]}
         initialRegion={region}
-        showsUserLocation={true}
+        showsUserLocation
         followsUserLocation={false}
       >
         {markers?.map((m) => (
@@ -34,13 +36,26 @@ export default function MapView({
             key={m.id}
             coordinate={{ latitude: m.latitude, longitude: m.longitude }}
           >
-            {/* ✅ Callout popup when tapped */}
-            <Callout tooltip>
+            <Callout
+              tooltip
+              onPress={() =>
+                router.push({
+                  pathname: "/spot/[id]",
+                  params: {
+                    id: m.id.toString(),
+                    title: m.title,
+                    description: m.description,
+                    image: m.image,
+                    latitude: m.latitude,
+                    longitude: m.longitude,
+                  },
+                })
+              }
+            >
               <View
                 className="bg-card rounded-xl overflow-hidden shadow-lg"
-                style={{ width: screenWidth * aspectRatio }}
+                style={{ width: screenWidth * 0.8 }}
               >
-                {/* ✅ Full-width horizontal image */}
                 {m.image && (
                   <Image
                     source={{ uri: m.image }}
@@ -50,26 +65,18 @@ export default function MapView({
                   />
                 )}
 
-                {/* ✅ Text section */}
                 <View className="p-3">
                   <Text className="text-black font-semibold text-base mb-1">
                     {m.title || "Untitled Spot"}
                   </Text>
-
                   {m.description ? (
-                    <Text className="text-black-300 text-sm">
-                      {m.description}
-                    </Text>
+                    <Text className="text-black text-sm">{m.description}</Text>
                   ) : (
-                    <Text className="text-black italic text-sm">
+                    <Text className="text-gray-500 italic text-sm">
                       No description
                     </Text>
                   )}
-                  <Text className="text-black-300 text-sm">
-                    <Text className="text-black-300 text-sm">
-                      {m.username}
-                    </Text>
-                  </Text>
+                  <Text className="text-black-300 text-sm"> {m.username} </Text>
                 </View>
               </View>
             </Callout>
@@ -79,4 +86,3 @@ export default function MapView({
     </View>
   );
 }
-
