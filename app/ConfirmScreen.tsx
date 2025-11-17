@@ -23,7 +23,7 @@ export default function ConfirmScreen() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [coords, setCoords] = useState<{ lat: number; lon: number } | null>(
-    null
+    null,
   );
   const PRIMARY = "#2490ef";
 
