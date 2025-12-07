@@ -20,7 +20,9 @@ type Post = {
   latitude?: number | null;
   longitude?: number | null;
   username?: string | null;
-  user_id?: number;
+  user_id?: number | string;
+  score: number; // total score
+  user_vote: -1 | 0 | 1; // current user vote
 };
 
 export default function ExplorePosts() {
@@ -40,16 +42,24 @@ export default function ExplorePosts() {
 
     return arr
       .filter((x) => x && typeof x === "object")
-      .map((x: any) => ({
-        id: Number(x.id),
-        title: typeof x.title === "string" ? x.title : "",
-        description: typeof x.description === "string" ? x.description : null,
-        s3_url: typeof x.s3_url === "string" ? x.s3_url : null,
-        latitude: typeof x.latitude === "number" ? x.latitude : null,
-        longitude: typeof x.longitude === "number" ? x.longitude : null,
-        username: typeof x.username === "string" ? x.username : "",
-        user_id: x.user_id != null ? String(x.user_id) : "",
-      }))
+      .map((x: any) => {
+        const rawUserVote = typeof x.user_vote === "number" ? x.user_vote : 0;
+        const normalizedUserVote: -1 | 0 | 1 =
+          rawUserVote > 0 ? 1 : rawUserVote < 0 ? -1 : 0;
+
+        return {
+          id: Number(x.id),
+          title: typeof x.title === "string" ? x.title : "",
+          description: typeof x.description === "string" ? x.description : null,
+          s3_url: typeof x.s3_url === "string" ? x.s3_url : null,
+          latitude: typeof x.latitude === "number" ? x.latitude : null,
+          longitude: typeof x.longitude === "number" ? x.longitude : null,
+          username: typeof x.username === "string" ? x.username : "",
+          user_id: x.user_id != null ? String(x.user_id) : "",
+          score: typeof x.score === "number" ? x.score : 0,
+          user_vote: normalizedUserVote,
+        };
+      })
       .filter((p) => Number.isFinite(p.id));
   };
 
@@ -92,6 +102,52 @@ export default function ExplorePosts() {
     setRefreshing(true);
     await loadPosts();
   }, [loadPosts]);
+
+  // upvote/downvote toggle
+  const toggleVote = useCallback(
+    async (postId: number, nextVote: -1 | 0 | 1) => {
+      const token = await SecureStore.getItemAsync("access_token");
+      if (!token) return;
+
+      // optimistic update
+      setPosts((prev) =>
+        prev.map((p) => {
+          if (p.id !== postId) return p;
+          const oldVote = p.user_vote ?? 0;
+          const delta = nextVote - oldVote;
+          return {
+            ...p,
+            user_vote: nextVote,
+            score: (p.score ?? 0) + delta,
+          };
+        })
+      );
+
+      try {
+        const res = await fetch(`${API_URL}/posts/${postId}/vote`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ value: nextVote }), // matches VoteRequest(value: int)
+        });
+
+        if (!res.ok) {
+          const text = await res.text();
+          console.error("❌ Vote error:", res.status, text);
+          // re-sync from server on error
+          loadPosts();
+        }
+        // we don't need res.json() here because we already optimistically updated
+      } catch (err) {
+        console.error("❌ Vote request failed:", err);
+        // re-sync from server on network error
+        loadPosts();
+      }
+    },
+    [loadPosts]
+  );
 
   const content = useMemo(() => {
     if (loading) {
@@ -155,6 +211,9 @@ export default function ExplorePosts() {
                   longitude: item.longitude,
                   username: String(item.username),
                   user_id: String(item.user_id),
+                  // 👇 pass vote data to detail screen
+                  score: item.score,
+                  user_vote: item.user_vote,
                 },
               });
             }}
@@ -173,7 +232,7 @@ export default function ExplorePosts() {
                     console.warn(
                       "Image failed to load for post",
                       item.id,
-                      e.nativeEvent?.error,
+                      e.nativeEvent?.error
                     );
                   }}
                 />
@@ -206,12 +265,51 @@ export default function ExplorePosts() {
                   by {item.username}
                 </Text>
               )}
+
+              {/* Reddit-style vote row */}
+              <View className="mt-3 flex-row items-center">
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={() =>
+                    toggleVote(item.id, item.user_vote === 1 ? 0 : 1)
+                  }
+                  className="px-2 py-1"
+                >
+                  <Text
+                    className={`text-2xl font-bold ${
+                      item.user_vote === 1 ? "text-orange-500" : "text-gray-400"
+                    }`}
+                  >
+                    ▲
+                  </Text>
+                </TouchableOpacity>
+
+                <Text className="mx-2 min-w-[32px] text-center text-base font-semibold text-gray-800">
+                  {item.score ?? 0}
+                </Text>
+
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={() =>
+                    toggleVote(item.id, item.user_vote === -1 ? 0 : -1)
+                  }
+                  className="px-2 py-1"
+                >
+                  <Text
+                    className={`text-2xl font-bold ${
+                      item.user_vote === -1 ? "text-blue-500" : "text-gray-400"
+                    }`}
+                  >
+                    ▼
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </TouchableOpacity>
         )}
       />
     );
-  }, [loading, posts, refreshing, onRefresh, error]);
+  }, [loading, posts, refreshing, onRefresh, error, toggleVote]);
 
   return <View className="flex-1 p-4 bg-background">{content}</View>;
 }
