@@ -16,4 +16,5 @@ export interface MarkerData {
   description?: string;
   image?: string; // ✅ S3 URL (presigned image)
   username?: string;
+  user_id: string | number;
 }

@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   Linking,
   ActivityIndicator,
+  Alert,
+  ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import MapView, { Marker } from "react-native-maps";
@@ -18,8 +20,19 @@ import "../../global.css";
 
 export default function SpotDetail() {
   const router = useRouter();
-  const { id, title, description, image, latitude, longitude } =
-    useLocalSearchParams();
+  const {
+    id,
+    title,
+    description,
+    image,
+    latitude,
+    longitude,
+    username,
+    user_id,
+  } = useLocalSearchParams();
+
+  const params = useLocalSearchParams();
+  console.log("RAW PARAMS:", params);
 
   const [userCoords, setUserCoords] = useState<{
     latitude: number;
@@ -29,6 +42,13 @@ export default function SpotDetail() {
   const [saved, setSaved] = useState(false);
   const [loadingSave, setLoadingSave] = useState(false);
   const [checkingSaved, setCheckingSaved] = useState(true);
+  const [alreadyFriend, setAlreadyFriend] = useState(false);
+  const [loadingFriendState, setLoadingFriendState] = useState(true);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const isOwnPost = Number(user_id) === Number(currentUser?.id);
+  console.log("Post owner user_id =", Number(user_id));
+  console.log("Current user id =", Number(currentUser?.id));
+  console.log("isOwnPost =", Number(user_id) === Number(currentUser?.id));
 
   // 🧭 Get user location
   useEffect(() => {
@@ -87,6 +107,50 @@ export default function SpotDetail() {
     })();
   }, [id]);
 
+  useEffect(() => {
+    (async () => {
+      try {
+        const token = await SecureStore.getItemAsync("access_token");
+        if (!token) return;
+
+        const res = await fetch(`${API_URL}/me/friends`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        const data = await res.json();
+        const friendIds = data.friends.map((f: any) => Number(f.id));
+
+        if (friendIds.includes(Number(user_id))) {
+          setAlreadyFriend(true);
+        }
+      } catch (err) {
+        console.error("friend check error:", err);
+      } finally {
+        setLoadingFriendState(false);
+      }
+    })();
+  }, [user_id]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const token = await SecureStore.getItemAsync("access_token");
+        if (!token) return;
+
+        const res = await fetch(`${API_URL}/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          setCurrentUser(data);
+        }
+      } catch (err) {
+        console.error("Error loading current user:", err);
+      }
+    })();
+  }, []);
+
   // 💾 Toggle Save / Unsave
   const toggleSave = async () => {
     if (loadingSave) return;
@@ -119,120 +183,174 @@ export default function SpotDetail() {
     const base = "http://maps.apple.com/?";
     if (userCoords) {
       Linking.openURL(
-        `${base}saddr=${userCoords.latitude},${userCoords.longitude}&daddr=${latitude},${longitude}&dirflg=d`
+        `${base}saddr=${userCoords.latitude},${userCoords.longitude}&daddr=${latitude},${longitude}&dirflg=d`,
       );
     } else {
       Linking.openURL(`${base}daddr=${latitude},${longitude}&dirflg=d`);
     }
   };
 
-  return (
-    <SafeAreaView className="flex-1 bg-background pt-12">
-      {/* 🧭 Back Button */}
-      <TouchableOpacity
-        onPress={() => router.back()}
-        className="absolute top-3 left-3 z-50 bg-white/80 mt-12 rounded-full p-2 shadow"
-      >
-        <Feather name="arrow-left" size={22} color="#000" />
-      </TouchableOpacity>
+  async function addFriend() {
+    try {
+      const token = await SecureStore.getItemAsync("access_token");
 
-      {/* 💾 Save Button */}
-      <TouchableOpacity
-        onPress={toggleSave}
-        className="absolute top-3 right-3 z-50 bg-white/80 mt-12 rounded-full p-2 shadow"
-        disabled={loadingSave || checkingSaved}
-      >
-        {saved ? (
-          <FontAwesome
-            name="bookmark"
-            size={24}
-            color="#2490ef"
-            style={{ opacity: loadingSave ? 0.6 : 1 }}
-          />
-        ) : (
-          <FontAwesome
-            name="bookmark-o"
-            size={24}
-            color="#000"
-            style={{ opacity: loadingSave ? 0.6 : 1 }}
+      const res = await fetch(`${API_URL}/friends/add/${user_id}`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const data = await res.json();
+
+      // ❗ Handle backend errors correctly
+      if (!res.ok) {
+        Alert.alert("Error", data.detail?.message || "Something went wrong");
+        return;
+      }
+
+      // ❗ If backend says “Already friends”
+      if (data.status === "exists") {
+        setAlreadyFriend(true);
+        Alert.alert("Info", "Already friends");
+        return;
+      }
+
+      // 🎉 Successfully added friend
+      setAlreadyFriend(true);
+      Alert.alert("Success", data.message);
+    } catch (err) {
+      console.error(err);
+      Alert.alert("Error", "Could not add friend");
+    }
+  }
+
+  return (
+    <SafeAreaView className="flex-1 bg-background">
+      <ScrollView contentContainerStyle={{ paddingBottom: 60 }}>
+        {/* 🧭 Back Button */}
+        <TouchableOpacity
+          onPress={() => router.back()}
+          className="absolute top-3 left-3 z-50 bg-white/80 mt-12 rounded-full p-2 shadow"
+        >
+          <Feather name="arrow-left" size={22} color="#000" />
+        </TouchableOpacity>
+
+        {/* 💾 Save Button */}
+        <TouchableOpacity
+          onPress={toggleSave}
+          className="absolute top-3 right-3 z-50 bg-white/80 mt-12 rounded-full p-2 shadow"
+          disabled={loadingSave || checkingSaved}
+        >
+          {saved ? (
+            <FontAwesome
+              name="bookmark"
+              size={24}
+              color="#2490ef"
+              style={{ opacity: loadingSave ? 0.6 : 1 }}
+            />
+          ) : (
+            <FontAwesome
+              name="bookmark-o"
+              size={24}
+              color="#000"
+              style={{ opacity: loadingSave ? 0.6 : 1 }}
+            />
+          )}
+        </TouchableOpacity>
+
+        {/* 🖼️ Image */}
+        {image && (
+          <Image
+            source={{ uri: image as string }}
+            className="w-full"
+            style={{ aspectRatio: 1.25 }}
+            resizeMode="cover"
           />
         )}
-      </TouchableOpacity>
 
-      {/* 🖼️ Image */}
-      {image && (
-        <Image
-          source={{ uri: image as string }}
-          className="w-full"
-          style={{ aspectRatio: 1.25 }}
-          resizeMode="cover"
-        />
-      )}
+        <View className="p-5">
+          {/* 📍 Title */}
+          <Text className="text-black text-2xl font-bold mb-2">{title}</Text>
 
-      <View className="p-5">
-        {/* 📍 Title */}
-        <Text className="text-black text-2xl font-bold mb-2">{title}</Text>
+          {/* 💬 Description */}
+          <Text className="text-black-300 text-base mb-4">
+            {description || "No description provided."}
+          </Text>
 
-        {/* 💬 Description */}
-        <Text className="text-black-300 text-base mb-4">
-          {description || "No description provided."}
-        </Text>
+          {/* 🌐 Coordinates */}
+          <Text className="text-black text-sm mb-3">
+            📍 Coordinates: {latitude}, {longitude}
+          </Text>
 
-        {/* 🌐 Coordinates */}
-        <Text className="text-black text-sm mb-3">
-          📍 Coordinates: {latitude}, {longitude}
-        </Text>
-
-        {/* 🗺️ Map Preview */}
-        {userCoords ? (
-          <MapView
-            style={{ width: "100%", height: 200, borderRadius: 12 }}
-            region={{
-              latitude: Number(latitude),
-              longitude: Number(longitude),
-              latitudeDelta: 0.05,
-              longitudeDelta: 0.05,
-            }}
-            className="rounded-xl mb-4"
-          >
-            <Marker
-              coordinate={{
-                latitude: userCoords.latitude,
-                longitude: userCoords.longitude,
-              }}
-              title="You"
-              pinColor="blue"
-            />
-            <Marker
-              coordinate={{
+          {/* 🗺️ Map Preview */}
+          {userCoords ? (
+            <MapView
+              style={{ width: "100%", height: 200, borderRadius: 12 }}
+              region={{
                 latitude: Number(latitude),
                 longitude: Number(longitude),
+                latitudeDelta: 0.05,
+                longitudeDelta: 0.05,
               }}
-              title={title as string}
-              pinColor="red"
-            />
-          </MapView>
-        ) : (
-          <ActivityIndicator size="small" color="#2490ef" />
-        )}
+              className="rounded-xl mb-4"
+            >
+              <Marker
+                coordinate={{
+                  latitude: userCoords.latitude,
+                  longitude: userCoords.longitude,
+                }}
+                title="You"
+                pinColor="blue"
+              />
+              <Marker
+                coordinate={{
+                  latitude: Number(latitude),
+                  longitude: Number(longitude),
+                }}
+                title={title as string}
+                pinColor="red"
+              />
+            </MapView>
+          ) : (
+            <ActivityIndicator size="small" color="#2490ef" />
+          )}
 
-        {/* 📏 Distance */}
-        {distance && (
-          <Text className="text-black text-sm mb-3">
-            📏 {distance.toFixed(2)} miles away
-          </Text>
-        )}
+          {/* 📏 Distance */}
+          {distance && (
+            <Text className="text-black text-sm mb-3">
+              📏 {distance.toFixed(2)} miles away
+            </Text>
+          )}
 
-        {/* 🚗 Open in Maps */}
-        <TouchableOpacity
-          onPress={openMaps}
-          className="bg-primary py-3 rounded-xl"
-        >
-          <Text className="text-center text-white font-semibold">
-            Open in Apple Maps
-          </Text>
-        </TouchableOpacity>
-      </View>
+          {/* 🚗 Open in Maps */}
+          <TouchableOpacity
+            onPress={openMaps}
+            className="bg-primary py-3 rounded-xl"
+          >
+            <Text className="text-center text-white font-semibold">
+              Open in Apple Maps
+            </Text>
+          </TouchableOpacity>
+          {!loadingFriendState &&
+            currentUser &&
+            !isOwnPost &&
+            (alreadyFriend ? (
+              <View className="mt-4 py-3 rounded-xl bg-gray-300">
+                <Text className="text-center text-white font-semibold">
+                  Already Friends
+                </Text>
+              </View>
+            ) : (
+              <TouchableOpacity
+                onPress={addFriend}
+                className="bg-primary py-3 rounded-xl mt-4"
+              >
+                <Text className="text-center text-white font-semibold">
+                  Add {username} as Friend
+                </Text>
+              </TouchableOpacity>
+            ))}
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }

@@ -54,6 +54,7 @@ export default function MapScreen() {
     title: p.title,
     description: p.description,
     image: p.s3_url, // if your MapView supports showing images
+    user_id: p.user_id,
     username: p.username,
   }));
 

@@ -48,6 +48,8 @@ export default function MapView({
                     image: m.image,
                     latitude: m.latitude,
                     longitude: m.longitude,
+                    username: String(m.username ?? ""),
+                    user_id: String(m.user_id ?? ""),
                   },
                 })
               }

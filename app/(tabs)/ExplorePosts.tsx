@@ -20,6 +20,7 @@ type Post = {
   latitude?: number | null;
   longitude?: number | null;
   username?: string | null;
+  user_id?: number;
 };
 
 export default function ExplorePosts() {
@@ -46,7 +47,8 @@ export default function ExplorePosts() {
         s3_url: typeof x.s3_url === "string" ? x.s3_url : null,
         latitude: typeof x.latitude === "number" ? x.latitude : null,
         longitude: typeof x.longitude === "number" ? x.longitude : null,
-        username: typeof x.username === "string" ? x.username : null,
+        username: typeof x.username === "string" ? x.username : "",
+        user_id: x.user_id != null ? String(x.user_id) : "",
       }))
       .filter((p) => Number.isFinite(p.id));
   };
@@ -140,7 +142,8 @@ export default function ExplorePosts() {
         renderItem={({ item }) => (
           <TouchableOpacity
             activeOpacity={0.85}
-            onPress={() =>
+            onPress={() => {
+              console.log("ITEM: ", item);
               router.push({
                 pathname: `/spot/${item.id}`,
                 params: {
@@ -150,9 +153,11 @@ export default function ExplorePosts() {
                   image: item.s3_url,
                   latitude: item.latitude,
                   longitude: item.longitude,
+                  username: String(item.username),
+                  user_id: String(item.user_id),
                 },
-              })
-            }
+              });
+            }}
           >
             <View className="mb-4 rounded-lg bg-card p-3 shadow">
               <Text className="text-lg font-semibold mb-1">
@@ -168,7 +173,7 @@ export default function ExplorePosts() {
                     console.warn(
                       "Image failed to load for post",
                       item.id,
-                      e.nativeEvent?.error
+                      e.nativeEvent?.error,
                     );
                   }}
                 />

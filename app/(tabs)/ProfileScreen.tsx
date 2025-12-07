@@ -83,7 +83,7 @@ export default function ProfileScreen() {
   useFocusEffect(
     useCallback(() => {
       loadSaved();
-    }, [loadSaved])
+    }, [loadSaved]),
   );
 
   // ✅ Pull-to-refresh
@@ -197,6 +197,8 @@ export default function ProfileScreen() {
                       image: item.s3_url,
                       latitude: item.latitude,
                       longitude: item.longitude,
+                      user_id: String(item.user_id),
+                      username: String(item.username),
                     },
                   })
                 }
