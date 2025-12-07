@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import {
   View,
@@ -29,6 +29,8 @@ export default function SpotDetail() {
     longitude,
     username,
     user_id,
+    score: paramScore,
+    user_vote: paramUserVote,
   } = useLocalSearchParams();
 
   const params = useLocalSearchParams();
@@ -45,10 +47,28 @@ export default function SpotDetail() {
   const [alreadyFriend, setAlreadyFriend] = useState(false);
   const [loadingFriendState, setLoadingFriendState] = useState(true);
   const [currentUser, setCurrentUser] = useState<any>(null);
+
+  // 🔼🔽 voting state
+  const [score, setScore] = useState<number>(0);
+  const [userVote, setUserVote] = useState<-1 | 0 | 1>(0);
+
+  const numericPostId = Number(id);
   const isOwnPost = Number(user_id) === Number(currentUser?.id);
   console.log("Post owner user_id =", Number(user_id));
   console.log("Current user id =", Number(currentUser?.id));
   console.log("isOwnPost =", Number(user_id) === Number(currentUser?.id));
+
+  // Seed score/userVote from params if provided
+  useEffect(() => {
+    const initialScore = Number(paramScore);
+    if (!Number.isNaN(initialScore)) {
+      setScore(initialScore);
+    }
+    const initialUserVoteNum = Number(paramUserVote);
+    if ([-1, 0, 1].includes(initialUserVoteNum)) {
+      setUserVote(initialUserVoteNum as -1 | 0 | 1);
+    }
+  }, [paramScore, paramUserVote]);
 
   // 🧭 Get user location
   useEffect(() => {
@@ -107,6 +127,7 @@ export default function SpotDetail() {
     })();
   }, [id]);
 
+  // 👥 Check friend state
   useEffect(() => {
     (async () => {
       try {
@@ -131,6 +152,7 @@ export default function SpotDetail() {
     })();
   }, [user_id]);
 
+  // 👤 Current user
   useEffect(() => {
     (async () => {
       try {
@@ -177,13 +199,54 @@ export default function SpotDetail() {
     }
   };
 
+  // 🔼🔽 Toggle vote (same logic as list screen)
+  const toggleVote = useCallback(
+    async (nextVote: -1 | 0 | 1) => {
+      if (!numericPostId || Number.isNaN(numericPostId)) return;
+
+      const token = await SecureStore.getItemAsync("access_token");
+      if (!token) return;
+
+      // optimistic update
+      setScore((prevScore) => prevScore + (nextVote - userVote));
+      const prevUserVote = userVote;
+      setUserVote(nextVote);
+
+      try {
+        const res = await fetch(`${API_URL}/posts/${numericPostId}/vote`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ value: nextVote }), // matches VoteRequest(value: int)
+        });
+
+        if (!res.ok) {
+          const text = await res.text();
+          console.error("❌ Vote error:", res.status, text);
+          // rollback if server rejects
+          setUserVote(prevUserVote);
+          setScore((prevScore) => prevScore - (nextVote - prevUserVote));
+        }
+        // do NOT call res.json() to avoid JSON parse error on empty body
+      } catch (err) {
+        console.error("❌ Vote request failed:", err);
+        // rollback on network error
+        setUserVote(prevUserVote);
+        setScore((prevScore) => prevScore - (nextVote - prevUserVote));
+      }
+    },
+    [numericPostId, userVote]
+  );
+
   // 🚗 Open in Apple Maps
   const openMaps = () => {
     if (!latitude || !longitude) return;
     const base = "http://maps.apple.com/?";
     if (userCoords) {
       Linking.openURL(
-        `${base}saddr=${userCoords.latitude},${userCoords.longitude}&daddr=${latitude},${longitude}&dirflg=d`,
+        `${base}saddr=${userCoords.latitude},${userCoords.longitude}&daddr=${latitude},${longitude}&dirflg=d`
       );
     } else {
       Linking.openURL(`${base}daddr=${latitude},${longitude}&dirflg=d`);
@@ -272,9 +335,44 @@ export default function SpotDetail() {
           <Text className="text-black text-2xl font-bold mb-2">{title}</Text>
 
           {/* 💬 Description */}
-          <Text className="text-black-300 text-base mb-4">
+          <Text className="text-black-300 text-base mb-2">
             {description || "No description provided."}
           </Text>
+
+          {/* 🔼🔽 Reddit-style vote row */}
+          <View className="mt-2 mb-3 flex-row items-center">
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => toggleVote(userVote === 1 ? 0 : 1)}
+              className="px-2 py-1"
+            >
+              <Text
+                className={`text-2xl font-bold ${
+                  userVote === 1 ? "text-orange-500" : "text-gray-400"
+                }`}
+              >
+                ▲
+              </Text>
+            </TouchableOpacity>
+
+            <Text className="mx-2 min-w-[32px] text-center text-base font-semibold text-gray-800">
+              {score ?? 0}
+            </Text>
+
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => toggleVote(userVote === -1 ? 0 : -1)}
+              className="px-2 py-1"
+            >
+              <Text
+                className={`text-2xl font-bold ${
+                  userVote === -1 ? "text-blue-500" : "text-gray-400"
+                }`}
+              >
+                ▼
+              </Text>
+            </TouchableOpacity>
+          </View>
 
           {/* 🌐 Coordinates */}
           <Text className="text-black text-sm mb-3">
@@ -330,6 +428,7 @@ export default function SpotDetail() {
               Open in Apple Maps
             </Text>
           </TouchableOpacity>
+
           {!loadingFriendState &&
             currentUser &&
             !isOwnPost &&

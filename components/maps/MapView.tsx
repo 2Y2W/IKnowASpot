@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Image, Text, Dimensions } from "react-native";
+import { View, Image, Text, Dimensions, TouchableOpacity } from "react-native";
 import RNMapView, { Marker, Callout, Region } from "react-native-maps";
 import { MapViewProps } from "./MapView.types";
 import { useRouter } from "expo-router";
@@ -13,6 +13,8 @@ export default function MapView({
   zoom = 14,
   style,
   markers,
+  onVote, // 👈 from updated MapViewProps
+  showUserLocation, // optional flag from props
 }: MapViewProps) {
   const region: Region = {
     latitude,
@@ -28,7 +30,7 @@ export default function MapView({
       <RNMapView
         style={[{ flex: 1 }, style]}
         initialRegion={region}
-        showsUserLocation
+        showsUserLocation={showUserLocation ?? true}
         followsUserLocation={false}
       >
         {markers?.map((m) => (
@@ -38,6 +40,7 @@ export default function MapView({
           >
             <Callout
               tooltip
+              // 👇 restore navigation on callout press
               onPress={() =>
                 router.push({
                   pathname: "/spot/[id]",
@@ -50,6 +53,8 @@ export default function MapView({
                     longitude: m.longitude,
                     username: String(m.username ?? ""),
                     user_id: String(m.user_id ?? ""),
+                    score: m.score ?? 0,
+                    user_vote: m.user_vote ?? 0,
                   },
                 })
               }
@@ -71,6 +76,7 @@ export default function MapView({
                   <Text className="text-black font-semibold text-base mb-1">
                     {m.title || "Untitled Spot"}
                   </Text>
+
                   {m.description ? (
                     <Text className="text-black text-sm">{m.description}</Text>
                   ) : (
@@ -78,7 +84,57 @@ export default function MapView({
                       No description
                     </Text>
                   )}
-                  <Text className="text-black-300 text-sm"> {m.username} </Text>
+
+                  {m.username && (
+                    <Text className="text-black-300 text-sm mt-1">
+                      {m.username}
+                    </Text>
+                  )}
+
+                  {/* 🔼🔽 Reddit-style vote row inside callout */}
+                  {onVote && (
+                    <View className="mt-2 flex-row items-center">
+                      <TouchableOpacity
+                        activeOpacity={0.7}
+                        onPress={() =>
+                          onVote(m.id.toString(), m.user_vote === 1 ? 0 : 1)
+                        }
+                        className="px-2 py-1"
+                      >
+                        <Text
+                          className={`text-2xl font-bold ${
+                            m.user_vote === 1
+                              ? "text-orange-500"
+                              : "text-gray-400"
+                          }`}
+                        >
+                          ▲
+                        </Text>
+                      </TouchableOpacity>
+
+                      <Text className="mx-2 min-w-[32px] text-center text-base font-semibold text-gray-800">
+                        {m.score ?? 0}
+                      </Text>
+
+                      <TouchableOpacity
+                        activeOpacity={0.7}
+                        onPress={() =>
+                          onVote(m.id.toString(), m.user_vote === -1 ? 0 : -1)
+                        }
+                        className="px-2 py-1"
+                      >
+                        <Text
+                          className={`text-2xl font-bold ${
+                            m.user_vote === -1
+                              ? "text-blue-500"
+                              : "text-gray-400"
+                          }`}
+                        >
+                          ▼
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
                 </View>
               </View>
             </Callout>
