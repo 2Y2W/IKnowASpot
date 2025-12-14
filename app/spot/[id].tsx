@@ -29,6 +29,7 @@ export default function SpotDetail() {
     longitude,
     username,
     user_id,
+    created_at,
     score: paramScore,
     user_vote: paramUserVote,
   } = useLocalSearchParams();
@@ -377,6 +378,9 @@ export default function SpotDetail() {
           {/* 🌐 Coordinates */}
           <Text className="text-black text-sm mb-3">
             📍 Coordinates: {latitude}, {longitude}
+          </Text>
+          <Text className="text-black text-sm mb-3">
+            Created: {String(created_at ?? "").split("T")[0]}
           </Text>
 
           {/* 🗺️ Map Preview */}
