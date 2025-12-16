@@ -17,6 +17,9 @@ type MapPost = {
   s3_url: string | null;
   user_id?: number | string;
   username?: string | null;
+
+  created_at?: string | null; // ✅ NEW
+
   score: number;
   user_vote: -1 | 0 | 1;
 };
@@ -71,6 +74,9 @@ export default function MapScreen() {
             s3_url: typeof p.s3_url === "string" ? p.s3_url : null,
             user_id: p.user_id,
             username: p.username,
+
+            created_at: typeof p.created_at === "string" ? p.created_at : null, // ✅ NEW
+
             score: typeof p.score === "number" ? p.score : 0,
             user_vote: normalizedUserVote,
           };
@@ -147,10 +153,8 @@ export default function MapScreen() {
         if (!res.ok) {
           const text = await res.text();
           console.error("❌ Vote error (map):", res.status, text);
-          // re-sync from server on error
           loadPosts();
         }
-        // no need to parse JSON; UI is already optimistically updated
       } catch (err) {
         console.error("❌ Vote request failed (map):", err);
         loadPosts();
@@ -178,6 +182,9 @@ export default function MapScreen() {
     image: p.s3_url,
     user_id: p.user_id,
     username: p.username,
+
+    created_at: p.created_at, // ✅ NEW (so MapView can pass it to SpotDetail)
+
     score: p.score,
     user_vote: p.user_vote,
   }));
@@ -193,7 +200,6 @@ export default function MapScreen() {
           zoom={14}
           showsUserLocation
           markers={spots}
-          // 👇 give MapView the ability to trigger votes
           onVote={toggleVote}
         />
       </View>
