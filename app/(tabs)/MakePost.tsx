@@ -18,7 +18,7 @@ export default function CameraScreen() {
       return () => {
         setActive(false);
       };
-    }, [])
+    }, []),
   );
 
   if (!permission) return <View />;

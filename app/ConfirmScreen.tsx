@@ -14,6 +14,7 @@ import {
 import * as SecureStore from "expo-secure-store";
 import * as Location from "expo-location";
 import { API_URL } from "@/lib/api";
+import { TAGS, Tag, TAG_COLORS } from "@/lib/tags";
 
 export default function ConfirmScreen() {
   const { uri } = useLocalSearchParams<{ uri: string }>();
@@ -25,7 +26,14 @@ export default function ConfirmScreen() {
   const [coords, setCoords] = useState<{ lat: number; lon: number } | null>(
     null,
   );
+  const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
+
   const PRIMARY = "#2490ef";
+  const toggleTag = (tag: Tag) => {
+    setSelectedTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
+    );
+  };
 
   //  Grab user location on mount
   useEffect(() => {
@@ -102,6 +110,7 @@ export default function ConfirmScreen() {
           description,
           latitude: coords?.lat,
           longitude: coords?.lon,
+          tags: selectedTags,
         }),
       });
 
@@ -158,6 +167,34 @@ export default function ConfirmScreen() {
         multiline
         placeholderTextColor="#888"
       />
+
+      {/* Tags */}
+      <View className="mb-5">
+        <Text className="text-sm font-semibold text-black mb-2">Tags</Text>
+
+        <View className="flex-row flex-wrap gap-2">
+          {TAGS.map((tag) => {
+            const active = selectedTags.includes(tag);
+            return (
+              <TouchableOpacity
+                key={tag}
+                onPress={() => toggleTag(tag)}
+                className="px-3 py-1.5 rounded-full"
+                style={{
+                  backgroundColor: active ? TAG_COLORS[tag] : "#E5E7EB",
+                }}
+              >
+                <Text
+                  className="text-xs font-semibold"
+                  style={{ color: active ? "white" : "#374151" }}
+                >
+                  {tag}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </View>
 
       {/* Buttons */}
       {loading ? (
