@@ -71,6 +71,44 @@ export default function SpotDetail() {
     }
   }, [paramScore, paramUserVote]);
 
+  const deletePost = async () => {
+    Alert.alert("Delete spot?", "This cannot be undone.", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            const token = await SecureStore.getItemAsync("access_token");
+            if (!token) {
+              Alert.alert("Error", "No access token");
+              return;
+            }
+
+            const res = await fetch(`${API_URL}/posts/${numericPostId}`, {
+              method: "DELETE",
+              headers: { Authorization: `Bearer ${token}` },
+            });
+
+            const data = await res.json().catch(() => ({}));
+
+            if (!res.ok) {
+              Alert.alert("Error", data?.detail || "Failed to delete post");
+              return;
+            }
+
+            Alert.alert("Deleted", "Spot removed.");
+            router.back();
+          } catch (err) {
+            console.error("Delete error:", err);
+            Alert.alert("Error", "Failed to delete post");
+          }
+        },
+      },
+    ]);
+  };
+
+
   // 🧭 Get user location
   useEffect(() => {
     (async () => {
@@ -117,7 +155,7 @@ export default function SpotDetail() {
         const data = await res.json();
         const savedPosts = data.saved_posts || [];
 
-        // ✅ If this post ID is in the saved list, set as saved
+        //  If this post ID is in the saved list, set as saved
         const isSaved = savedPosts.some((p: any) => p.id === Number(id));
         setSaved(isSaved);
       } catch (err) {
@@ -432,6 +470,16 @@ export default function SpotDetail() {
               Open in Apple Maps
             </Text>
           </TouchableOpacity>
+          {currentUser && isOwnPost && (
+            <TouchableOpacity
+              onPress={deletePost}
+              className="bg-red-600 py-3 rounded-xl mt-4"
+            >
+              <Text className="text-center text-white font-semibold">
+                Delete Spot
+              </Text>
+            </TouchableOpacity>
+          )}
 
           {!loadingFriendState &&
             currentUser &&

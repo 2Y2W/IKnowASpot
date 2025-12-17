@@ -7,6 +7,8 @@ import * as SecureStore from "expo-secure-store";
 import MapView from "../../components/maps/MapView";
 import { API_URL } from "@/lib/api";
 import "../../global.css";
+import { useFocusEffect } from "expo-router";
+
 
 type MapPost = {
   id: number | string;
@@ -18,7 +20,7 @@ type MapPost = {
   user_id?: number | string;
   username?: string | null;
 
-  created_at?: string | null; // ✅ NEW
+  created_at?: string | null; 
 
   score: number;
   user_vote: -1 | 0 | 1;
@@ -31,6 +33,9 @@ export default function MapScreen() {
   } | null>(null);
   const [posts, setPosts] = useState<MapPost[]>([]);
   const [loading, setLoading] = useState(true);
+
+
+
 
   const loadPosts = useCallback(async () => {
     try {
@@ -75,7 +80,7 @@ export default function MapScreen() {
             user_id: p.user_id,
             username: p.username,
 
-            created_at: typeof p.created_at === "string" ? p.created_at : null, // ✅ NEW
+            created_at: typeof p.created_at === "string" ? p.created_at : null,
 
             score: typeof p.score === "number" ? p.score : 0,
             user_vote: normalizedUserVote,
@@ -94,6 +99,13 @@ export default function MapScreen() {
       setPosts([]);
     }
   }, []);
+
+
+    useFocusEffect(
+      useCallback(() => {
+        loadPosts();
+      }, [loadPosts])
+    );
 
   useEffect(() => {
     (async () => {
@@ -183,8 +195,7 @@ export default function MapScreen() {
     user_id: p.user_id,
     username: p.username,
 
-    created_at: p.created_at, // ✅ NEW (so MapView can pass it to SpotDetail)
-
+    created_at: p.created_at,
     score: p.score,
     user_vote: p.user_vote,
   }));
