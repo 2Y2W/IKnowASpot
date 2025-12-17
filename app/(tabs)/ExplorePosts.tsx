@@ -13,6 +13,7 @@ import {
 import * as SecureStore from "expo-secure-store";
 import { useRouter } from "expo-router";
 import { API_URL } from "@/lib/api";
+import { TAGS, Tag, TAG_COLORS } from "@/lib/tags";
 
 type Post = {
   id: number;
@@ -23,9 +24,10 @@ type Post = {
   longitude?: number | null;
   username?: string | null;
   user_id?: number | string;
-  created_at: string; 
+  created_at: string;
   score: number; // total score
   user_vote: -1 | 0 | 1; // current user vote
+  tags?: string[];
 };
 
 type SortMode = "recent" | "top";
@@ -35,6 +37,7 @@ export default function ExplorePosts() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
 
   const [sortMode, setSortMode] = useState<SortMode>("recent");
   const [sortOpen, setSortOpen] = useState(false);
@@ -43,6 +46,13 @@ export default function ExplorePosts() {
   const PRIMARY = "#2490ef";
 
   const sortLabel = sortMode === "recent" ? "New" : "Top";
+  const toggleTag = (tag: Tag) => {
+    setSelectedTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
+    );
+  };
+
+  const clearTags = () => setSelectedTags([]);
 
   const parseList = (payload: unknown): Post[] => {
     const arr = Array.isArray(payload)
@@ -70,6 +80,7 @@ export default function ExplorePosts() {
           created_at: typeof x.created_at === "string" ? x.created_at : "",
           score: typeof x.score === "number" ? x.score : 0,
           user_vote: normalizedUserVote,
+          tags: Array.isArray(x.tags) ? x.tags : [],
         };
       })
       .filter((p) => Number.isFinite(p.id));
@@ -116,21 +127,29 @@ export default function ExplorePosts() {
   }, [loadPosts]);
 
   const sortedPosts = useMemo(() => {
-    // ✅ robust time parser (Hermes + MySQL-friendly)
+    // 1️⃣ Filter by selected tags (ANY match)
+    const filteredPosts =
+      selectedTags.length === 0
+        ? posts
+        : posts.filter((p) =>
+            p.tags?.some((tag) => selectedTags.includes(tag as Tag)),
+          );
+
+    // 2️⃣ Sort filtered posts
+    const copy = [...filteredPosts];
+
+    // robust time parser (unchanged from your code)
     const safeTime = (s: string) => {
       if (!s) return 0;
 
       let cleaned = String(s).trim();
 
-      // "YYYY-MM-DD HH:MM:SS" -> "YYYY-MM-DDTHH:MM:SS"
       if (!cleaned.includes("T") && cleaned.includes(" ")) {
         cleaned = cleaned.replace(" ", "T");
       }
 
-      // trim microseconds -> milliseconds (Hermes dislikes 6 digits)
       cleaned = cleaned.replace(/\.(\d{3})\d+/, ".$1");
 
-      // if no timezone, assume UTC
       const hasTZ = /Z$|[+-]\d{2}:\d{2}$/.test(cleaned);
       if (!hasTZ) cleaned += "Z";
 
@@ -138,10 +157,7 @@ export default function ExplorePosts() {
       return Number.isFinite(t) ? t : 0;
     };
 
-    const copy = [...posts];
-
     if (sortMode === "recent") {
-      // ✅ newest first
       copy.sort((a, b) => safeTime(b.created_at) - safeTime(a.created_at));
       return copy;
     }
@@ -154,7 +170,7 @@ export default function ExplorePosts() {
     });
 
     return copy;
-  }, [posts, sortMode]);
+  }, [posts, sortMode, selectedTags]);
 
   const setSortAndClose = useCallback((mode: SortMode) => {
     setSortMode(mode);
@@ -178,7 +194,7 @@ export default function ExplorePosts() {
             user_vote: nextVote,
             score: (p.score ?? 0) + delta,
           };
-        })
+        }),
       );
 
       try {
@@ -201,7 +217,7 @@ export default function ExplorePosts() {
         loadPosts();
       }
     },
-    [loadPosts]
+    [loadPosts],
   );
 
   const content = useMemo(() => {
@@ -272,6 +288,44 @@ export default function ExplorePosts() {
                   Highest score first
                 </Text>
               </TouchableOpacity>
+              {/* 🔖 TAG FILTERS */}
+              <Text className="px-2 py-2 mt-3 text-xs uppercase text-gray-400">
+                Filter by tags
+              </Text>
+
+              <View className="flex-row flex-wrap gap-2 px-2 pb-2">
+                {TAGS.map((tag) => {
+                  const active = selectedTags.includes(tag);
+                  return (
+                    <TouchableOpacity
+                      key={tag}
+                      onPress={() => toggleTag(tag)}
+                      className="px-3 py-1.5 rounded-full"
+                      style={{
+                        backgroundColor: active ? TAG_COLORS[tag] : "#E5E7EB",
+                      }}
+                    >
+                      <Text
+                        className="text-xs font-semibold"
+                        style={{ color: active ? "white" : "#374151" }}
+                      >
+                        {tag}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              {selectedTags.length > 0 && (
+                <TouchableOpacity
+                  onPress={() => setSelectedTags([])}
+                  className="mx-2 mt-2 rounded-lg bg-gray-200 px-3 py-2"
+                >
+                  <Text className="text-center text-sm font-semibold text-gray-700">
+                    Clear tag filters
+                  </Text>
+                </TouchableOpacity>
+              )}
             </Pressable>
           </Pressable>
         </Modal>
@@ -332,7 +386,9 @@ export default function ExplorePosts() {
             <TouchableOpacity
               activeOpacity={0.85}
               onPress={() => {
-                console.log("ITEM: ", item);
+                // console.log("ITEM: ", item);
+                console.log("ITEM TAGS:", item.tags);
+
                 router.push({
                   pathname: `/spot/${item.id}`,
                   params: {
@@ -347,6 +403,7 @@ export default function ExplorePosts() {
                     created_at: item.created_at,
                     score: item.score,
                     user_vote: item.user_vote,
+                    tags: JSON.stringify(item.tags ?? []),
                   },
                 });
               }}
@@ -365,13 +422,32 @@ export default function ExplorePosts() {
                       console.warn(
                         "Image failed to load for post",
                         item.id,
-                        e.nativeEvent?.error
+                        e.nativeEvent?.error,
                       );
                     }}
                   />
                 ) : (
                   <View className="w-full h-52 mb-2 rounded-lg bg-gray-200 items-center justify-center">
                     <Text className="text-gray-500">No image</Text>
+                  </View>
+                )}
+                {item.tags && item.tags.length > 0 && (
+                  <View className="flex-row flex-wrap gap-2 mb-2">
+                    {item.tags.map((tag) => (
+                      <View
+                        key={tag}
+                        className="px-2 py-1 rounded-full"
+                        style={{
+                          backgroundColor:
+                            TAG_COLORS[tag as keyof typeof TAG_COLORS] ??
+                            "#E5E7EB",
+                        }}
+                      >
+                        <Text className="text-xs font-semibold text-white">
+                          {tag}
+                        </Text>
+                      </View>
+                    ))}
                   </View>
                 )}
 

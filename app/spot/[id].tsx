@@ -17,6 +17,7 @@ import { Feather, FontAwesome } from "@expo/vector-icons";
 import * as SecureStore from "expo-secure-store";
 import { API_URL } from "@/lib/api";
 import "../../global.css";
+import { TAG_COLORS } from "@/lib/tags";
 
 export default function SpotDetail() {
   const router = useRouter();
@@ -32,6 +33,7 @@ export default function SpotDetail() {
     created_at,
     score: paramScore,
     user_vote: paramUserVote,
+    tags,
   } = useLocalSearchParams();
 
   const params = useLocalSearchParams();
@@ -52,6 +54,19 @@ export default function SpotDetail() {
   // 🔼🔽 voting state
   const [score, setScore] = useState<number>(0);
   const [userVote, setUserVote] = useState<-1 | 0 | 1>(0);
+
+  const parsedTags: string[] = (() => {
+    try {
+      if (typeof tags === "string") {
+        return JSON.parse(tags);
+      }
+    } catch (e) {
+      console.warn("Failed to parse tags:", tags);
+    }
+    return [];
+  })();
+
+  console.log("PARSED TAGS: ", parsedTags);
 
   const numericPostId = Number(id);
   const isOwnPost = Number(user_id) === Number(currentUser?.id);
@@ -107,7 +122,6 @@ export default function SpotDetail() {
       },
     ]);
   };
-
 
   // 🧭 Get user location
   useEffect(() => {
@@ -276,7 +290,7 @@ export default function SpotDetail() {
         setScore((prevScore) => prevScore - (nextVote - prevUserVote));
       }
     },
-    [numericPostId, userVote]
+    [numericPostId, userVote],
   );
 
   // 🚗 Open in Apple Maps
@@ -285,7 +299,7 @@ export default function SpotDetail() {
     const base = "http://maps.apple.com/?";
     if (userCoords) {
       Linking.openURL(
-        `${base}saddr=${userCoords.latitude},${userCoords.longitude}&daddr=${latitude},${longitude}&dirflg=d`
+        `${base}saddr=${userCoords.latitude},${userCoords.longitude}&daddr=${latitude},${longitude}&dirflg=d`,
       );
     } else {
       Linking.openURL(`${base}daddr=${latitude},${longitude}&dirflg=d`);
@@ -372,6 +386,25 @@ export default function SpotDetail() {
         <View className="p-5">
           {/* 📍 Title */}
           <Text className="text-black text-2xl font-bold mb-2">{title}</Text>
+
+          {parsedTags.length > 0 && (
+            <View className="flex-row flex-wrap gap-2 mb-3">
+              {parsedTags.map((tag) => (
+                <View
+                  key={tag}
+                  className="px-2 py-1 rounded-full"
+                  style={{
+                    backgroundColor:
+                      TAG_COLORS[tag as keyof typeof TAG_COLORS] ?? "#E5E7EB",
+                  }}
+                >
+                  <Text className="text-xs font-semibold text-white">
+                    {tag}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
 
           {/* 💬 Description */}
           <Text className="text-black-300 text-base mb-2">
