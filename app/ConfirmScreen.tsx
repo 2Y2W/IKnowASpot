@@ -27,7 +27,7 @@ export default function ConfirmScreen() {
   );
   const PRIMARY = "#2490ef";
 
-  // ✅ Grab user location on mount
+  //  Grab user location on mount
   useEffect(() => {
     (async () => {
       let { status } = await Location.requestForegroundPermissionsAsync();

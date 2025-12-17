@@ -24,7 +24,7 @@ export default function ProfileScreen() {
 
   const PRIMARY = "#2490ef";
 
-  // ✅ Load user data from /me
+  //  Load user data from /me
   const loadUser = useCallback(async () => {
     try {
       const token = await SecureStore.getItemAsync("access_token");
@@ -46,7 +46,7 @@ export default function ProfileScreen() {
     }
   }, []);
 
-  // ✅ Load saved posts from /me/saved
+  //  Load saved posts from /me/saved
   const loadSaved = useCallback(async () => {
     try {
       const token = await SecureStore.getItemAsync("access_token");
@@ -64,14 +64,14 @@ export default function ProfileScreen() {
       const data = await res.json();
       console.log("💾 Saved posts response:", data);
 
-      // ✅ Access correct array
+      //  Access correct array
       setSavedPosts(Array.isArray(data.saved_posts) ? data.saved_posts : []);
     } catch (err) {
       console.error("❌ Error fetching saved posts:", err);
     }
   }, []);
 
-  // ✅ Initial load
+  //  Initial load
   useEffect(() => {
     const init = async () => {
       await Promise.all([loadUser(), loadSaved()]);
@@ -79,14 +79,14 @@ export default function ProfileScreen() {
     init();
   }, [loadUser, loadSaved]);
 
-  // ✅ Re-fetch saved posts whenever returning to this screen
+  //  Re-fetch saved posts whenever returning to this screen
   useFocusEffect(
     useCallback(() => {
       loadSaved();
     }, [loadSaved]),
   );
 
-  // ✅ Pull-to-refresh
+  //  Pull-to-refresh
   const onRefresh = async () => {
     setRefreshing(true);
     if (activeTab === "posts") {
@@ -96,7 +96,7 @@ export default function ProfileScreen() {
     }
   };
 
-  // ✅ Render Loading
+  //  Render Loading
   if (loading && !user) {
     return (
       <View className="flex-1 justify-center items-center bg-background">
