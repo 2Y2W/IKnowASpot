@@ -9,7 +9,6 @@ import { API_URL } from "@/lib/api";
 import "../../global.css";
 import { useFocusEffect } from "expo-router";
 
-
 type MapPost = {
   id: number | string;
   latitude: number;
@@ -20,10 +19,11 @@ type MapPost = {
   user_id?: number | string;
   username?: string | null;
 
-  created_at?: string | null; 
+  created_at?: string | null;
 
   score: number;
   user_vote: -1 | 0 | 1;
+  tags?: string[];
 };
 
 export default function MapScreen() {
@@ -33,9 +33,6 @@ export default function MapScreen() {
   } | null>(null);
   const [posts, setPosts] = useState<MapPost[]>([]);
   const [loading, setLoading] = useState(true);
-
-
-
 
   const loadPosts = useCallback(async () => {
     try {
@@ -84,13 +81,14 @@ export default function MapScreen() {
 
             score: typeof p.score === "number" ? p.score : 0,
             user_vote: normalizedUserVote,
+            tags: Array.isArray(p.tags) ? p.tags : [],
           };
         })
         .filter(
           (p) =>
             Number.isFinite(p.latitude) &&
             Number.isFinite(p.longitude) &&
-            p.id != null
+            p.id != null,
         );
 
       setPosts(mapped);
@@ -100,12 +98,11 @@ export default function MapScreen() {
     }
   }, []);
 
-
-    useFocusEffect(
-      useCallback(() => {
-        loadPosts();
-      }, [loadPosts])
-    );
+  useFocusEffect(
+    useCallback(() => {
+      loadPosts();
+    }, [loadPosts]),
+  );
 
   useEffect(() => {
     (async () => {
@@ -149,7 +146,7 @@ export default function MapScreen() {
             user_vote: nextVote,
             score: (p.score ?? 0) + delta,
           };
-        })
+        }),
       );
 
       try {
@@ -172,7 +169,7 @@ export default function MapScreen() {
         loadPosts();
       }
     },
-    [loadPosts]
+    [loadPosts],
   );
 
   if (loading || !coords) {
@@ -198,6 +195,7 @@ export default function MapScreen() {
     created_at: p.created_at,
     score: p.score,
     user_vote: p.user_vote,
+    tags: p.tags,
   }));
 
   return (
