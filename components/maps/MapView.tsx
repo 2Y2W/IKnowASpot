@@ -4,6 +4,7 @@ import RNMapView, { Marker, Callout, Region } from "react-native-maps";
 import { MapViewProps } from "./MapView.types";
 import { useRouter } from "expo-router";
 import "../../global.css";
+import { TAG_COLORS } from "@/lib/tags";
 
 const { width: screenWidth } = Dimensions.get("window");
 
@@ -13,8 +14,8 @@ export default function MapView({
   zoom = 14,
   style,
   markers,
-  onVote, // 👈 from updated MapViewProps
-  showUserLocation, // optional flag from props
+  onVote,
+  showUserLocation,
 }: MapViewProps) {
   const region: Region = {
     latitude,
@@ -62,6 +63,7 @@ export default function MapView({
 
                       score: m.score ?? 0,
                       user_vote: normalizedUserVote,
+                      tags: JSON.stringify(m.tags ?? []),
                     },
                   })
                 }
@@ -84,6 +86,26 @@ export default function MapView({
                       {m.title || "Untitled Spot"}
                     </Text>
 
+                    {m.tags && m.tags.length > 0 && (
+                      <View className="flex-row flex-wrap gap-2 mb-2">
+                        {m.tags.map((tag) => (
+                          <View
+                            key={tag}
+                            className="px-2 py-1 rounded-full"
+                            style={{
+                              backgroundColor:
+                                TAG_COLORS[tag as keyof typeof TAG_COLORS] ??
+                                "#E5E7EB",
+                            }}
+                          >
+                            <Text className="text-xs font-semibold text-white">
+                              {tag}
+                            </Text>
+                          </View>
+                        ))}
+                      </View>
+                    )}
+
                     {m.description ? (
                       <Text className="text-black text-sm">
                         {m.description}
@@ -100,7 +122,6 @@ export default function MapView({
                       </Text>
                     )}
 
-                    {/* 🔼🔽 Reddit-style vote row inside callout */}
                     {onVote && (
                       <View className="mt-2 flex-row items-center">
                         <TouchableOpacity
@@ -108,7 +129,7 @@ export default function MapView({
                           onPress={() =>
                             onVote(
                               m.id.toString(),
-                              normalizedUserVote === 1 ? 0 : 1
+                              normalizedUserVote === 1 ? 0 : 1,
                             )
                           }
                           className="px-2 py-1"
@@ -133,7 +154,7 @@ export default function MapView({
                           onPress={() =>
                             onVote(
                               m.id.toString(),
-                              normalizedUserVote === -1 ? 0 : -1
+                              normalizedUserVote === -1 ? 0 : -1,
                             )
                           }
                           className="px-2 py-1"

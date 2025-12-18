@@ -6,8 +6,8 @@ export interface MapViewProps {
   style?: React.CSSProperties | object; // RN vs Web
   markers?: MarkerData[];
   showUserLocation?: boolean;
-  // 👇 allow map to trigger votes
   onVote?: (postId: string, nextVote: -1 | 0 | 1) => void;
+  tags?: string[];
 }
 
 export interface MarkerData {
@@ -16,13 +16,11 @@ export interface MarkerData {
   longitude: number;
   title?: string | null;
   description?: string | null;
-  image?: string | null; // ✅ S3 URL (presigned image)
+  image?: string | null;
   username?: string | null;
   user_id: string | number;
-
-  created_at?: string | null; // ✅ NEW (date posted)
-
-  // 👇 voting info for each marker
+  created_at?: string | null;
   score?: number;
   user_vote?: -1 | 0 | 1;
+  tags?: string[];
 }
